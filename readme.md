@@ -9,6 +9,7 @@
 
 ## Project Setup
 
+* Need to configure a [service connection](https://docs.microsoft.com/en-us/azure/devops/pipelines/library/service-endpoints?view=azure-devops&tabs=yaml)
 * Navigate to `Project Settings`
 * Select `New service connection`
 * Select `Azure Resource Manager`
