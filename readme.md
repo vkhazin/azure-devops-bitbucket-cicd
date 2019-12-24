@@ -28,6 +28,6 @@
 * From [Azure DevOps](https://dev.azure.com/) select `Pipelines` -> `Create Pipeline`
 * Select `Bitbucket Cloud` `Yaml`
 * Search and select a repository with pipeline yaml present
-* Select `Select an existing YAML file`
+* Choose `Select an existing YAML file`
 * Select pipeline definition file
 * Save or run the new pipeline
