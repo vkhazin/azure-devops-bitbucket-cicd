@@ -9,7 +9,6 @@
 
 ## Project Setup
 
-* Need to configure a [service connection](https://docs.microsoft.com/en-us/azure/devops/pipelines/library/service-endpoints?view=azure-devops&tabs=yaml)
 * Navigate to `Project Settings`
 * Select `New service connection`
 * Select `Azure Resource Manager`
@@ -29,6 +28,6 @@
 * From [Azure DevOps](https://dev.azure.com/) select `Pipelines` -> `Create Pipeline`
 * Select `Bitbucket Cloud` `Yaml`
 * Search and select a repository with pipeline yaml present
-* Choose `Select an existing YAML file`
+* Select `Select an existing YAML file`
 * Select pipeline definition file
 * Save or run the new pipeline
