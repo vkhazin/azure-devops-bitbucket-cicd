@@ -1,0 +1,112 @@
+trigger:
+- master
+
+variables:
+  # Integration with Bitbucket
+  - group: bitbucket-integration
+  - name: bitbucket-repo-owner
+    value: 'vktrp'
+  - name: bitbucket-repo-name
+    value: 'azuread-authn-svc'
+  # Azure Resource Manager connection created during pipeline creation
+  - name: azureSubscription
+    value: 'trgos'
+  # Function app name
+  - name: functionAppName
+    value: 'trgos-authentication'
+  # Agent VM image name
+  - name: vmBuildImageName
+    value: 'vs2017-win2016'
+  - name: vmRunTimeImageName
+    value: 'vs2017-win2016'
+  # Working Directory
+  - name: workingDirectory
+    value: '**'
+  # Artifact File Path
+  - name: artifactFile
+    value: '$(functionAppName)-$(Build.BuildId).zip'
+  # Azure Blob Storage for artifacts
+  # - name: absStorage
+  #   value: 'sttrgosartifacts'
+  # # Azure Blob Storage container name for artifacts
+  # - name: absContainerName
+  #   value : 'azuread-authn-svc'
+
+stages:
+- stage: Build
+  displayName: Build stage
+
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmBuildImageName)
+
+    steps:
+    - task: DotNetCoreCLI@2
+      displayName: Build
+      inputs:
+        command: 'build'
+        projects: |
+          $(workingDirectory)/*.csproj
+        arguments: --output $(System.DefaultWorkingDirectory)/publish_output --configuration Release
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Run Tests'
+      inputs:
+        command: test
+        projects: '**/*Tests/*.csproj'
+        arguments: '--configuration $(buildConfiguration)'
+
+    - task: ArchiveFiles@2
+      displayName: 'Archive files'
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)/publish_output'
+        includeRootFolder: false
+        archiveType: zip
+        archiveFile: '$(Build.ArtifactStagingDirectory)/$(artifactFile)'
+        replaceExistingArchive: true
+
+    - task: PublishBuildArtifacts@1                                             
+      inputs:
+        pathtoPublish: '$(Build.ArtifactStagingDirectory)/$(artifactFile)'
+        artifactName: 'artifact'
+
+    - task: Bash@3
+      displayName: PublishArtifactToBitbucket
+      inputs:
+        targetType: 'inline'
+        script: 'curl -X POST "https://$(bitbucket_username):$(bitbucket_password)@api.bitbucket.org/2.0/repositories/$(bitbucket-repo-owner)/$(bitbucket-repo-name)/downloads" --form files=@"$(Build.ArtifactStagingDirectory)/$(artifactFile)" -v'
+
+    # - task: AzureFileCopy@2
+    #   displayName: 'Azure Blob File Copy'
+    #   inputs:
+    #     sourcePath: '$(Build.ArtifactStagingDirectory)/$(artifactFile)'
+    #     azureSubscription: '$(azureSubscription)'
+    #     destination: azureBlob
+    #     storage: '$(absStorage)'
+    #     containerName: '$(absContainerName)'
+
+- stage: Deploy
+  displayName: Deploy stage
+  dependsOn: Build
+  condition: succeeded()
+
+  jobs:
+  - deployment: Deploy
+    displayName: Deploy
+    environment: 'development'
+    pool:
+      vmImage: $(vmRunTimeImageName)
+
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureFunctionApp@1
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              appType: 'functionApp'
+              appName: '$(functionAppName)'
+              package: '$(Pipeline.Workspace)/artifact/$(artifactFile)'
+              deploymentMethod: 'auto'
